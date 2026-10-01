@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Control de Ruta JF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400;0,700;1,700&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Layout: la planilla Control de Ruta del Excel como hoja; etiquetas grises, celdas amarillas para llenar, totales verdes calculados, bandas azul oscuro. Look único (papel). */
+:root{
+  --desk:#d6d9dd; --paper:#ffffff; --rule:#7f7f7f; --navy:#1f3864; --navy-ink:#ffffff;
+  --label:#d9d9d9; --fill:#fff2cc; --calc:#e2efda; --ink:#1f3f9a; --print:#111;
+  --muted:#666; --focus:#ffe08a; --locked:#eeeeee; --error:#b3261e; --go:#1f6b46; --wa:#1d8f4e;
+  --printed:"Arimo", Arial, Helvetica, sans-serif;
+  --typed:"Courier Prime", "Courier New", monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--desk);color:var(--print);font:14px/1.35 var(--printed);padding-inline:10px;padding-block:16px 48px}
+.wrap{max-width:860px;margin:0 auto;display:grid;gap:14px}
+.intro{margin:0;text-align:center;font-size:.95rem;color:#2b2b2b}
+.intro .y{background:var(--fill);border:1px solid var(--rule);padding:0 6px;font-family:var(--typed);color:var(--ink)}
+
+.sheet{background:var(--paper);box-shadow:0 12px 30px -12px #00000055;padding:14px;display:grid;gap:12px}
+.blk{display:grid;border-top:1px solid var(--rule);border-left:1px solid var(--rule)}
+.blk > *{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
+
+/* encabezado */
+.top{display:grid;grid-template-columns:1fr 32%;border:1px solid var(--rule)}
+.top h1{margin:0;font-size:1.7rem;font-weight:700;display:grid;place-items:center;padding:8px;border-right:1px solid var(--rule);letter-spacing:.02em}
+.top .own{display:grid;grid-template-rows:auto auto}
+.top .own b{font-size:.75rem;text-align:center;padding:5px;border-bottom:1px solid var(--rule)}
+.top .own div{display:grid;grid-template-columns:40% 1fr}
+.top .own span{font-size:.68rem;font-weight:700;background:var(--label);display:grid;place-items:center;border-right:1px solid var(--rule);padding:4px}
+
+/* pares etiqueta / valor */
+.kv{grid-template-columns:20% 30% 20% 30%}
+.lab{background:var(--label);font-weight:700;font-size:.7rem;text-transform:uppercase;padding:6px 6px;display:flex;align-items:center}
+.lab small{text-transform:none;font-weight:400;margin-left:4px;color:var(--muted)}
+.val{background:var(--fill);display:flex;align-items:center}
+.val:focus-within{background:var(--focus)}
+.calc{background:var(--calc);font-family:var(--typed);font-weight:700;justify-content:flex-end;padding:6px 8px;color:var(--print)}
+.locked{background:repeating-linear-gradient(135deg,var(--locked) 0 6px,#fafafa 6px 12px);font-family:var(--typed);font-size:.72rem;color:var(--muted);justify-content:center;display:flex;align-items:center;padding:6px}
+input,textarea{font:400 .98rem/1.25 var(--typed);color:var(--ink);background:transparent;border:0;padding:7px 6px;width:100%;min-width:0;border-radius:0}
+input::placeholder{color:#b9a46a;font-style:italic}
+input:focus{outline:none}
+input[type=date]{min-height:34px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.money{display:flex;align-items:center;width:100%;color:var(--ink);font-family:var(--typed);padding-left:6px}
+.bad{background:#fde7e5!important;outline:1.5px solid var(--error);outline-offset:-1.5px}
+
+.band{background:var(--navy);color:var(--navy-ink);font-weight:700;font-size:.74rem;padding:6px 8px;letter-spacing:.03em}
+.hd{background:var(--navy);color:var(--navy-ink);font-weight:700;font-size:.7rem;padding:5px 6px;text-align:center}
+
+/* anticipos: dos columnas de 4 */
+.ant{grid-template-columns:repeat(2, 17% 18% 15%)}
+.ant .n{background:var(--label);font-weight:700;font-size:.68rem;padding:6px;display:flex;align-items:center}
+/* acpm */
+.acpm{grid-template-columns:18% 1fr 22%}
+.tot{background:var(--label);font-weight:700;font-size:.74rem;padding:6px 8px;display:flex;align-items:center}
+/* gastos */
+.gas{grid-template-columns:28% 1fr 22%}
+.gas .nm{background:var(--label);font-weight:700;font-size:.7rem;padding:6px;display:flex;align-items:center;text-transform:uppercase}
+.gas .note{font-size:.7rem;font-style:italic;color:var(--muted);padding:6px;display:flex;align-items:center;background:#fafafa}
+.center{justify-content:center;text-align:center}
+/* resumen */
+.res{grid-template-columns:1fr 26%}
+.res .lab{font-size:.74rem}
+.res .big{font-size:1.02rem}
+/* soportes */
+.sop{border:1px dashed var(--rule);padding:10px;display:grid;gap:10px;background:#fcfcfc}
+.sop p{margin:0;font-size:.8rem;color:var(--muted)}
+.add{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid var(--navy);color:var(--navy);font-weight:700;padding:11px 14px;cursor:pointer;background:var(--paper);border-radius:6px}
+.add:focus-within{outline:2px solid var(--ink)}
+.add input{position:absolute;opacity:0;width:1px;height:1px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+.th{position:relative;border:1px solid var(--rule);aspect-ratio:3/4;max-width:100%;background:#eee;overflow:hidden}
+.th img{width:100%;height:100%;object-fit:cover;display:block}
+.th button{position:absolute;top:3px;right:3px;width:26px;height:26px;border-radius:50%;border:0;background:#000000b0;color:#fff;font-weight:700;cursor:pointer}
+.th span{position:absolute;left:0;bottom:0;background:#000000a0;color:#fff;font-size:.66rem;padding:1px 5px}
+/* firmas */
+.firmas{display:grid;grid-template-columns:1fr 1fr;gap:36px;padding:26px 8px 4px}
+.firm{display:grid;text-align:center;gap:2px;align-content:end;min-height:70px}
+.firm .sig{font-family:var(--typed);color:var(--ink);min-height:1.3em}
+.firm .line{border-top:1px solid var(--print);padding-top:3px;font-weight:700;font-size:.7rem}
+
+@media (max-width:640px){
+  .sheet{padding:8px}
+  .top{grid-template-columns:1fr}
+  .top h1{border-right:0;border-bottom:1px solid var(--rule);font-size:1.4rem}
+  .kv{grid-template-columns:40% 60%}
+  .ant{grid-template-columns:2.4rem 1fr 1fr}
+  .ant .n .t{display:none}
+  .acpm{grid-template-columns:1fr 1fr;grid-auto-flow:row dense}
+  .acpm .prov{grid-column:1/-1}
+  .acpm .hd.p{display:none}
+  .gas{grid-template-columns:1fr 42%;grid-auto-flow:row dense}
+  .gas .ob{grid-column:1/-1}
+  .gas .hd.o{display:none}
+  .res{grid-template-columns:1fr 40%}
+  .firmas{grid-template-columns:1fr;gap:30px}
+}
+@media (min-width:641px){ .mob{display:none!important} }
+
+/* acciones */
+.actions,.done{display:grid;gap:10px;max-width:520px;width:100%;margin:0 auto}
+.btn{font:700 1.05rem var(--printed);border:0;border-radius:8px;padding:15px;width:100%;cursor:pointer}
+.btn:focus-visible{outline:3px solid var(--print);outline-offset:2px}
+.go{background:var(--navy);color:#fff}
+.wa{background:var(--wa);color:#fff}
+.ghost{background:var(--paper);color:var(--print);border:1.5px solid var(--rule)}
+.err{background:#fde7e5;color:var(--error);border:1px solid #f2b8b5;border-radius:8px;padding:10px 12px;margin:0;font-size:.92rem}
+.done{background:var(--paper);border:2px solid var(--go);border-radius:10px;padding:16px}
+.done p{margin:0}
+.foot{font-size:.78rem;color:#444;text-align:center;margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="intro">Llena las celdas <span class="y">amarillas</span>. Lo verde se calcula solo y lo rayado lo llena la oficina.</p>
+
+  <form id="form" novalidate class="wrap" style="max-width:none">
+  <div class="sheet">
+    <div class="top">
+      <h1>CONTROL DE RUTA</h1>
+      <div class="own"><b>JORGE LUIS FONSECA G.</b><div><span>CONSEC.</span><span class="locked" style="background-color:transparent">Oficina</span></div></div>
+    </div>
+
+    <div class="blk kv">
+      <div class="lab">Viaje N°</div><div class="locked">Oficina</div>
+      <label class="lab" for="manifiesto">Manifiesto</label><div class="val"><input id="manifiesto" inputmode="numeric"></div>
+      <label class="lab" for="fecha">Fecha</label><div class="val"><input id="fecha" type="date" required></div>
+      <label class="lab" for="placa">Placa</label><div class="val"><input id="placa" placeholder="ABC123" maxlength="8" style="text-transform:uppercase" required></div>
+      <label class="lab" for="conductor">Nombre conductor</label><div class="val"><input id="conductor" autocomplete="name" required></div>
+      <label class="lab" for="cc">C.C.</label><div class="val"><input id="cc" inputmode="numeric" required></div>
+    </div>
+
+    <div class="blk kv">
+      <label class="lab" for="kmIni">Km inicial</label><div class="val"><input id="kmIni" class="num k" inputmode="numeric"></div>
+      <label class="lab" for="flete">Vr. flete</label><div class="val"><span class="money">$<input id="flete" class="num m" inputmode="numeric"></span></div>
+      <label class="lab" for="kmFin">Km final</label><div class="val"><input id="kmFin" class="num k" inputmode="numeric"></div>
+      <label class="lab" for="origen">Origen</label><div class="val"><input id="origen" required></div>
+      <div class="lab">Km recorridos</div><div class="calc" id="kmRec"></div>
+      <label class="lab" for="destino">Destino</label><div class="val"><input id="destino" required></div>
+      <label class="lab" for="cliente">Cliente</label><div class="val"><input id="cliente"></div>
+      <div class="lab">Total anticipos</div><div class="calc" id="totAnt">$ 0</div>
+      <label class="lab" for="producto">Producto</label><div class="val"><input id="producto"></div>
+      <div class="lab">Total ACPM</div><div class="calc" id="totAcpm1">$ 0</div>
+    </div>
+
+    <div class="blk">
+      <div class="band">RELACIÓN ANTICIPOS DEL CONDUCTOR</div>
+      <div class="blk ant" id="antGrid" style="border:0"></div>
+    </div>
+
+    <div class="blk">
+      <div class="band">DETALLE DE COMBUSTIBLE (ACPM)</div>
+      <div class="blk acpm" id="acpmGrid" style="border:0">
+        <div class="hd">FECHA</div><div class="hd p">PROVEEDOR</div><div class="hd">VALOR</div>
+      </div>
+      <div class="blk acpm" style="border:0"><div class="tot" style="grid-column:1/-2">TOTAL ACPM</div><div class="calc" id="totAcpm2">$ 0</div></div>
+    </div>
+
+    <div class="blk">
+      <div class="blk gas" id="gasGrid" style="border:0">
+        <div class="hd">GASTOS</div><div class="hd o">OBSERVACIÓN / SOPORTE</div><div class="hd">VALOR TOTAL</div>
+      </div>
+      <div class="blk gas" style="border:0"><div class="tot center" style="grid-column:1/-2">TOTAL GASTOS</div><div class="calc" id="totGas">$ 0</div></div>
+    </div>
+
+    <div class="blk res">
+      <div class="lab">(+) Total anticipos</div><div class="calc" id="rAnt">$ 0</div>
+      <div class="lab">(−) Total gastos leg.</div><div class="calc" id="rGas">$ 0</div>
+      <div class="lab big">(=) Saldo a favor del conductor</div><div class="calc big" id="rFavor">$ 0</div>
+      <div class="lab big">(=) Saldo en contra del conductor</div><div class="calc big" id="rContra">$ 0</div>
+    </div>
+
+    <div class="sop">
+      <div class="band" style="margin:-10px -10px 0">SOPORTES · FOTOS DE RECIBOS</div>
+      <p>Toma o escoge fotos de peajes, tanqueos, parqueaderos y demás recibos. Salen al final del PDF.</p>
+      <label class="add">＋ Agregar fotos<input id="fotos" type="file" accept="image/*" multiple></label>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+
+    <div class="firmas">
+      <div class="firm"><span class="sig" id="sigNom"></span><span class="sig" id="sigCc"></span><div class="line">FIRMA CONDUCTOR</div></div>
+      <div class="firm"><span class="sig"></span><div class="line">REVISÓ / APROBÓ</div></div>
+    </div>
+  </div>
+
+  <div class="actions" id="actions">
+    <p id="err" class="err" hidden></p>
+    <button class="btn go" type="submit">Crear PDF</button>
+  </div>
+  </form>
+
+  <div id="done" class="done" hidden>
+    <p><b>Listo.</b> El control de ruta está creado.</p>
+    <button id="share" class="btn wa" type="button">Compartir por WhatsApp</button>
+    <button id="download" class="btn ghost" type="button">Descargar PDF</button>
+    <button id="edit" class="btn ghost" type="button">Corregir datos</button>
+  </div>
+
+  <p class="foot">Esta página no guarda datos. Todo se queda en tu celular.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString("es-CO");
+const money = n => "$ " + fmt(n);
+const num = id => Number(($(id)?.value || "").replace(/\D/g,"")) || 0;
+const GASTOS = ["Peajes","Cargue","Descargue","Engrase","Llantas","Parqueaderos","Lavados","Arreglos y repuestos","% Conductor","Carrozada","Descarrozada","Brillada","Mangueras","Comisión"];
+
+// ---- construir filas ----
+const ant = $("antGrid");
+const antHtml = i => `<div class="n">${i}<span class="t">- FECHA / VALOR</span></div>
+  <div class="val"><input id="aF${i}" type="date" aria-label="Anticipo ${i} fecha"></div>
+  <div class="val"><span class="money">$<input id="aV${i}" class="num m" inputmode="numeric" aria-label="Anticipo ${i} valor"></span></div>`;
+// escritorio: cada fila lleva el anticipo k y el k+4, como el Excel; celular: 1 a 8 en orden
+if(matchMedia("(max-width:640px)").matches){ for(let i=1;i<=8;i++) ant.insertAdjacentHTML("beforeend", antHtml(i)); }
+else { for(let k=1;k<=4;k++) ant.insertAdjacentHTML("beforeend", antHtml(k) + antHtml(k+4)); }
+
+const ac = $("acpmGrid");
+for(let i=1;i<=4;i++) ac.insertAdjacentHTML("beforeend",
+  `<div class="val"><input id="cF${i}" type="date" aria-label="Tanqueo ${i} fecha"></div>
+   <div class="val prov"><input id="cP${i}" placeholder="Proveedor / estación" aria-label="Tanqueo ${i} proveedor"></div>
+   <div class="val"><span class="money">$<input id="cV${i}" class="num m" inputmode="numeric" aria-label="Tanqueo ${i} valor"></span></div>`);
+
+const gs = $("gasGrid");
+gs.insertAdjacentHTML("beforeend", `<div class="nm">ACPM</div><div class="note ob">Viene del detalle de combustible</div><div class="calc" id="gAcpm">$ 0</div>`);
+GASTOS.forEach((g,i) => gs.insertAdjacentHTML("beforeend",
+  `<div class="nm">${g}</div>
+   <div class="val ob"><input id="gO${i}" placeholder="Observación" aria-label="${g} observación"></div>
+   <div class="val"><span class="money">$<input id="gV${i}" class="num m" inputmode="numeric" aria-label="${g} valor"></span></div>`));
+[0,1].forEach(j => { const i = GASTOS.length + j; gs.insertAdjacentHTML("beforeend",
+  `<div class="val" style="background:var(--fill)"><input id="gN${i}" placeholder="Otro gasto" aria-label="Otro gasto ${j+1} nombre" style="font-weight:700;text-transform:uppercase"></div>
+   <div class="val ob"><input id="gO${i}" placeholder="Observación" aria-label="Otro gasto ${j+1} observación"></div>
+   <div class="val"><span class="money">$<input id="gV${i}" class="num m" inputmode="numeric" aria-label="Otro gasto ${j+1} valor"></span></div>`); });
+const NG = GASTOS.length + 2;
+
+// ---- formato y cálculos ----
+document.addEventListener("input", e => {
+  const t = e.target;
+  if(t.classList.contains("num")){ const d = t.value.replace(/\D/g,""); t.value = d ? fmt(Number(d)) : ""; }
+  if(["cc","manifiesto"].includes(t.id)) t.value = t.value.replace(/[^\d.-]/g,"");
+  if(t.id==="placa") t.value = t.value.toUpperCase().replace(/[^A-Z0-9]/g,"");
+  calcular();
+});
+function totales(){
+  let a=0; for(let i=1;i<=8;i++) a+=num("aV"+i);
+  let c=0; for(let i=1;i<=4;i++) c+=num("cV"+i);
+  let g=c; for(let i=0;i<NG;i++) g+=num("gV"+i);
+  const ki=num("kmIni"), kf=num("kmFin");
+  return {ant:a, acpm:c, gastos:g, km:(ki&&kf)? kf-ki : null, favor:Math.max(g-a,0), contra:Math.max(a-g,0)};
+}
+function calcular(){
+  const t = totales();
+  $("kmRec").textContent = t.km===null ? "" : fmt(t.km);
+  $("totAnt").textContent = $("rAnt").textContent = money(t.ant);
+  $("totAcpm1").textContent = $("totAcpm2").textContent = $("gAcpm").textContent = money(t.acpm);
+  $("totGas").textContent = $("rGas").textContent = money(t.gastos);
+  $("rFavor").textContent = money(t.favor); $("rContra").textContent = money(t.contra);
+  $("sigNom").textContent = $("conductor").value.trim().toUpperCase();
+  $("sigCc").textContent = $("cc").value.trim() ? "C.C. " + $("cc").value.trim() : "";
+}
+calcular();
+
+// ---- fotos (se reducen para que el PDF no pese) ----
+const fotos = [];
+$("fotos").addEventListener("change", async e => {
+  for(const f of e.target.files){ try{ fotos.push(await reducir(f)); }catch(_){} }
+  e.target.value = ""; pintarFotos();
+});
+function reducir(file){
+  return new Promise((ok,fail) => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1400, s = Math.min(1, max/Math.max(img.width,img.height));
+      const cv = document.createElement("canvas"); cv.width = Math.round(img.width*s); cv.height = Math.round(img.height*s);
+      cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height); URL.revokeObjectURL(url);
+      ok({src:cv.toDataURL("image/jpeg",0.72), w:cv.width, h:cv.height});
+    };
+    img.onerror = fail; img.src = url;
+  });
+}
+function pintarFotos(){
+  $("thumbs").innerHTML = fotos.map((f,i)=>`<div class="th"><img src="${f.src}" alt="Soporte ${i+1}"><span>Soporte ${i+1}</span><button type="button" data-i="${i}" aria-label="Quitar soporte ${i+1}">✕</button></div>`).join("");
+}
+$("thumbs").addEventListener("click", e => { const b = e.target.closest("button"); if(b){ fotos.splice(Number(b.dataset.i),1); pintarFotos(); } });
+
+// ---- validar y crear ----
+function validar(){
+  const req = [["fecha","la fecha"],["placa","la placa"],["conductor","el nombre del conductor"],["cc","la cédula"],["origen","el origen"],["destino","el destino"]];
+  document.querySelectorAll(".bad").forEach(el=>el.classList.remove("bad"));
+  const f = []; req.forEach(([id,t]) => { if(!$(id).value.trim()){ f.push(t); $(id).parentElement.classList.add("bad"); } });
+  return f;
+}
+let pdfBlob=null, pdfName="";
+$("form").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = validar();
+  if(f.length){ $("err").textContent = "Falta llenar: " + f.join(", ") + "."; $("err").hidden=false; document.querySelector(".bad input")?.focus(); return; }
+  $("err").hidden = true;
+  try{
+    const doc = crearPDF();
+    pdfBlob = doc.output("blob");
+    pdfName = `Control_ruta_${$("placa").value}_${$("fecha").value}.pdf`;
+    $("actions").hidden = true; $("done").hidden = false;
+    $("done").scrollIntoView({behavior:"smooth", block:"center"});
+  }catch(err){
+    $("err").textContent = "No se pudo crear el PDF. Revisa tu conexión a internet y vuelve a intentarlo."; $("err").hidden=false;
+  }
+});
+$("edit").onclick = () => { $("done").hidden = true; $("actions").hidden = false; };
+function descargar(){
+  const url = URL.createObjectURL(pdfBlob); const a = document.createElement("a");
+  a.href=url; a.download=pdfName; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+$("download").onclick = descargar;
+$("share").onclick = async () => {
+  const file = new File([pdfBlob], pdfName, {type:"application/pdf"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:"Control de ruta"}); }catch(e){}
+  }else{
+    descargar();
+    $("err").textContent = "Tu celular no deja compartir directo. El PDF se descargó: ábrelo desde Descargas y envíalo por WhatsApp.";
+    $("err").hidden=false; $("done").appendChild($("err"));
+  }
+};
+
+// ---------- PDF con la planilla Control de Ruta ----------
+function leer(){
+  const v = id => $(id).value.trim();
+  const fecha = s => { if(!s) return ""; const [y,m,d]=s.split("-"); return `${d}/${m}/${y}`; };
+  const d = {manifiesto:v("manifiesto"), fecha:fecha(v("fecha")), placa:v("placa"), conductor:v("conductor").toUpperCase(), cc:v("cc"),
+    kmIni:num("kmIni"), kmFin:num("kmFin"), flete:num("flete"), origen:v("origen").toUpperCase(), destino:v("destino").toUpperCase(),
+    cliente:v("cliente").toUpperCase(), producto:v("producto").toUpperCase(), ant:[], acpm:[], gastos:[]};
+  for(let i=1;i<=8;i++) d.ant.push({f:fecha(v("aF"+i)), v:num("aV"+i)});
+  for(let i=1;i<=4;i++) d.acpm.push({f:fecha(v("cF"+i)), p:v("cP"+i), v:num("cV"+i)});
+  for(let i=0;i<NG;i++) d.gastos.push({n: i<GASTOS.length ? GASTOS[i].toUpperCase() : v("gN"+i).toUpperCase(), o:v("gO"+i), v:num("gV"+i)});
+  return d;
+}
+function crearPDF(){
+  const d = leer(), t = totales();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:"mm", format:"letter"});
+  const NAVY=[31,56,100], GREY=[217,217,217], YEL=[255,242,204], GREEN=[226,239,218];
+  // columnas A..H como el Excel
+  const C = [12,46,70,94,108,142,164,182,204];
+  const RH = 5; let y = 10;
+  doc.setLineWidth(0.2); doc.setDrawColor(127);
+  const font=(s,z)=>{doc.setFont("helvetica",s);doc.setFontSize(z);};
+  // celda de la columna a hasta la columna b (inclusive), índices 0..7
+  const cell=(a,b,text,o={})=>{
+    const x=C[a], w=C[b+1]-C[a], h=o.h||RH;
+    if(o.fill){doc.setFillColor(...o.fill); doc.rect(x,y,w,h,"FD");} else doc.rect(x,y,w,h);
+    if(text===undefined||text===null||text==="") return;
+    font(o.bold?"bold":"normal", o.size||7); doc.setTextColor(...(o.color||[0,0,0]));
+    let s = String(text); const lines = doc.splitTextToSize(s, w-2); s = lines[0] + (lines.length>1?"…":"");
+    const ty = y + h/2 + 1.1;
+    if(o.align==="right") doc.text(s, x+w-1.5, ty, {align:"right"});
+    else if(o.align==="center") doc.text(s, x+w/2, ty, {align:"center"});
+    else doc.text(s, x+1.5, ty);
+    doc.setTextColor(0,0,0);
+  };
+  const L = (a,b,s) => cell(a,b,s,{fill:GREY,bold:true,size:6.5});
+  const V = (a,b,s,al) => cell(a,b,s,{size:7.5,align:al,color:[31,63,154]});
+  const N = (a,b,s) => cell(a,b,s,{fill:NAVY,bold:true,size:7,color:[255,255,255],align:"center"});
+  const m = n => n ? money(n) : "";
+  const sp = (h=3) => { y += h; };
+
+  // encabezado
+  cell(0,5,"CONTROL DE RUTA",{h:10,bold:true,size:16,align:"center"});
+  cell(6,7,"JORGE LUIS FONSECA G.",{h:5,bold:true,size:6.5,align:"center"});
+  y+=5; cell(6,6,"CONSEC.",{fill:GREY,bold:true,size:6,align:"center"}); cell(7,7,"",{}); y+=5;
+  L(0,0,"VIAJE N°"); V(1,3,""); L(4,4,"MANIFIESTO"); V(5,7,d.manifiesto); y+=RH;
+  L(0,0,"FECHA"); V(1,3,d.fecha); L(4,4,"PLACA"); V(5,7,d.placa); y+=RH;
+  L(0,0,"NOMBRE CONDUCTOR"); V(1,3,d.conductor); L(4,4,"C.C."); V(5,7,d.cc); y+=RH;
+  sp();
+  L(0,0,"KM INICIAL"); V(1,3,d.kmIni?fmt(d.kmIni):"","right"); L(4,4,"VR. FLETE"); V(5,7,m(d.flete),"right"); y+=RH;
+  L(0,0,"KM FINAL"); V(1,3,d.kmFin?fmt(d.kmFin):"","right"); L(4,4,"ORIGEN"); V(5,7,d.origen); y+=RH;
+  L(0,0,"KM RECORRIDOS"); cell(1,3,t.km===null?"":fmt(t.km),{fill:GREEN,bold:true,size:7.5,align:"right"}); L(4,4,"DESTINO"); V(5,7,d.destino); y+=RH;
+  L(0,0,"CLIENTE"); V(1,3,d.cliente); L(4,4,"TOTAL ANTICIPOS"); cell(5,7,money(t.ant),{fill:GREEN,bold:true,size:7.5,align:"right"}); y+=RH;
+  L(0,0,"PRODUCTO"); V(1,3,d.producto); L(4,4,"TOTAL ACPM"); cell(5,7,money(t.acpm),{fill:GREEN,bold:true,size:7.5,align:"right"}); y+=RH;
+  sp();
+  cell(0,7,"RELACIÓN ANTICIPOS DEL CONDUCTOR",{fill:NAVY,bold:true,size:7,color:[255,255,255]}); y+=RH;
+  for(let k=0;k<4;k++){
+    const a=d.ant[k], b=d.ant[k+4];
+    L(0,0,`${k+1}- FECHA / VALOR`); V(1,1,a.f,"center"); V(2,3,m(a.v),"right");
+    L(4,4,`${k+5}- FECHA / VALOR`); V(5,5,b.f,"center"); V(6,7,m(b.v),"right"); y+=RH;
+  }
+  sp();
+  cell(0,7,"DETALLE DE COMBUSTIBLE (ACPM)",{fill:NAVY,bold:true,size:7,color:[255,255,255]}); y+=RH;
+  N(0,0,"FECHA"); N(1,6,"PROVEEDOR"); N(7,7,"VALOR"); y+=RH;
+  d.acpm.forEach(r => { V(0,0,r.f,"center"); V(1,6,r.p); V(7,7,m(r.v),"right"); y+=RH; });
+  cell(0,6,"TOTAL ACPM",{fill:GREY,bold:true,size:7}); cell(7,7,money(t.acpm),{fill:GREY,bold:true,size:7.5,align:"right"}); y+=RH;
+  sp();
+  N(0,2,"GASTOS"); N(3,5,"OBSERVACIÓN / SOPORTE"); N(6,7,"VALOR TOTAL"); y+=RH;
+  L(0,2,"ACPM"); cell(3,5,"Viene del detalle de combustible",{size:6,color:[110,110,110]}); V(6,7,money(t.acpm),"right"); y+=RH;
+  d.gastos.forEach(g => { L(0,2,g.n); V(3,5,g.o); V(6,7,m(g.v),"right"); y+=RH; });
+  cell(0,5,"TOTAL GASTOS",{fill:GREY,bold:true,size:8,align:"center"}); cell(6,7,money(t.gastos),{fill:GREY,bold:true,size:8,align:"right"}); y+=RH;
+  sp();
+  [["(+) TOTAL ANTICIPOS",t.ant],["(-) TOTAL GASTOS LEG.",t.gastos],["(=) SALDO A FAVOR DEL CONDUCTOR",t.favor],["(=) SALDO EN CONTRA DEL CONDUCTOR",t.contra]]
+    .forEach(([l,v],i) => { cell(0,5,l,{fill:GREY,bold:true,size:7}); cell(6,7,money(v),{fill:i>1?GREEN:null,bold:true,size:7.5,align:"right"}); y+=RH; });
+  // firmas
+  y += 13;
+  font("normal",8); doc.setTextColor(31,63,154);
+  doc.text(d.conductor, (C[0]+C[3])/2, y-5, {align:"center"}); doc.text("C.C. "+d.cc, (C[0]+C[3])/2, y-1.5, {align:"center"});
+  doc.setTextColor(0); doc.setDrawColor(0); doc.line(C[0],y,C[3],y); doc.line(C[5],y,C[8],y);
+  font("bold",6.5); doc.text("FIRMA CONDUCTOR",(C[0]+C[3])/2,y+3.5,{align:"center"}); doc.text("REVISÓ / APROBÓ",(C[5]+C[8])/2,y+3.5,{align:"center"});
+
+  // hojas de soportes: 2 fotos por hoja
+  const W=186, H=118;
+  fotos.forEach((f,i) => {
+    if(i%2===0){
+      doc.addPage(); doc.setFillColor(...NAVY); doc.rect(12,10,192,7,"F");
+      font("bold",8); doc.setTextColor(255); doc.text(`SOPORTES · CONTROL DE RUTA ${d.placa} · ${d.fecha} · ${d.conductor}`, 14, 14.8); doc.setTextColor(0);
+    }
+    const top = i%2===0 ? 21 : 21+H+9;
+    const s = Math.min(W/f.w, H/f.h), w=f.w*s, h=f.h*s;
+    doc.addImage(f.src, "JPEG", 12+(192-w)/2, top+(H-h)/2, w, h);
+    font("normal",7); doc.text(`Soporte ${i+1}`, 12, top+H+4);
+  });
+  return doc;
+}
+</script>
+</body>
+</html>
