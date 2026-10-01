@@ -180,7 +180,7 @@ input[type=date]{min-height:34px}
 
     <div class="sop">
       <div class="band" style="margin:-10px -10px 0">SOPORTES · FOTOS DE RECIBOS</div>
-      <p>Toma o escoge fotos de peajes, tanqueos, parqueaderos y demás recibos. Salen al final del PDF.</p>
+      <p>Toma o escoge fotos de peajes, tanqueos, parqueaderos y demás recibos. Cada foto sale en una hoja completa al final del PDF.</p>
       <label class="add">＋ Agregar fotos<input id="fotos" type="file" accept="image/*" multiple></label>
       <div class="thumbs" id="thumbs"></div>
     </div>
@@ -279,10 +279,10 @@ function reducir(file){
   return new Promise((ok,fail) => {
     const img = new Image(); const url = URL.createObjectURL(file);
     img.onload = () => {
-      const max = 1400, s = Math.min(1, max/Math.max(img.width,img.height));
+      const max = 2000, s = Math.min(1, max/Math.max(img.width,img.height));
       const cv = document.createElement("canvas"); cv.width = Math.round(img.width*s); cv.height = Math.round(img.height*s);
       cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height); URL.revokeObjectURL(url);
-      ok({src:cv.toDataURL("image/jpeg",0.72), w:cv.width, h:cv.height});
+      ok({src:cv.toDataURL("image/jpeg",0.75), w:cv.width, h:cv.height});
     };
     img.onerror = fail; img.src = url;
   });
@@ -413,17 +413,14 @@ function crearPDF(){
   doc.setTextColor(0); doc.setDrawColor(0); doc.line(C[0],y,C[3],y); doc.line(C[5],y,C[8],y);
   font("bold",6.5); doc.text("FIRMA CONDUCTOR",(C[0]+C[3])/2,y+3.5,{align:"center"}); doc.text("REVISÓ / APROBÓ",(C[5]+C[8])/2,y+3.5,{align:"center"});
 
-  // hojas de soportes: 2 fotos por hoja
-  const W=186, H=118;
+  // hojas de soportes: una foto por hoja, ocupando todo el espacio
+  const W=192, H=246, TOP=20;
   fotos.forEach((f,i) => {
-    if(i%2===0){
-      doc.addPage(); doc.setFillColor(...NAVY); doc.rect(12,10,192,7,"F");
-      font("bold",8); doc.setTextColor(255); doc.text(`SOPORTES · CONTROL DE RUTA ${d.placa} · ${d.fecha} · ${d.conductor}`, 14, 14.8); doc.setTextColor(0);
-    }
-    const top = i%2===0 ? 21 : 21+H+9;
+    doc.addPage(); doc.setFillColor(...NAVY); doc.rect(12,10,192,7,"F");
+    font("bold",8); doc.setTextColor(255);
+    doc.text(`SOPORTE ${i+1} DE ${fotos.length} · CONTROL DE RUTA ${d.placa} · ${d.fecha} · ${d.conductor}`, 14, 14.8); doc.setTextColor(0);
     const s = Math.min(W/f.w, H/f.h), w=f.w*s, h=f.h*s;
-    doc.addImage(f.src, "JPEG", 12+(192-w)/2, top+(H-h)/2, w, h);
-    font("normal",7); doc.text(`Soporte ${i+1}`, 12, top+H+4);
+    doc.addImage(f.src, "JPEG", 12+(W-w)/2, TOP+(H-h)/2, w, h);
   });
   return doc;
 }
