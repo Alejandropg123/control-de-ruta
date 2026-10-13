@@ -47,7 +47,7 @@ body{margin:0;background:var(--desk);color:var(--print);font:14px/1.35 var(--pri
 input,textarea{font:400 .98rem/1.25 var(--typed);color:var(--ink);background:transparent;border:0;padding:7px 6px;width:100%;min-width:0;border-radius:0}
 input::placeholder{color:#b9a46a;font-style:italic}
 input:focus{outline:none}
-input[type=date]{min-height:34px}
+.fe{letter-spacing:.03em}
 .num{text-align:right;font-variant-numeric:tabular-nums}
 .money{display:flex;align-items:center;width:100%;color:var(--ink);font-family:var(--typed);padding-left:6px}
 .bad{background:#fde7e5!important;outline:1.5px solid var(--error);outline-offset:-1.5px}
@@ -132,7 +132,7 @@ input[type=date]{min-height:34px}
     <div class="blk kv">
       <div class="lab">Viaje N°</div><div class="locked">Oficina</div>
       <label class="lab" for="manifiesto">Manifiesto</label><div class="val"><input id="manifiesto" inputmode="numeric"></div>
-      <label class="lab" for="fecha">Fecha</label><div class="val"><input id="fecha" type="date" required></div>
+      <label class="lab" for="fecha">Fecha</label><div class="val"><input id="fecha" class="fe" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" required></div>
       <label class="lab" for="placa">Placa</label><div class="val"><input id="placa" placeholder="ABC123" maxlength="8" style="text-transform:uppercase" required></div>
       <label class="lab" for="conductor">Nombre conductor</label><div class="val"><input id="conductor" autocomplete="name" required></div>
       <label class="lab" for="cc">C.C.</label><div class="val"><input id="cc" inputmode="numeric" required></div>
@@ -213,12 +213,19 @@ const $ = id => document.getElementById(id);
 const fmt = n => Math.round(n).toLocaleString("es-CO");
 const money = n => "$ " + fmt(n);
 const num = id => Number(($(id)?.value || "").replace(/\D/g,"")) || 0;
+
+// ---- fechas escritas a mano (dd/mm/aaaa), sin el calendario del celular ----
+const mascaraFecha = v => { const d = v.replace(/\D/g,"").slice(0,8); return d.slice(0,2) + (d.length>2 ? "/"+d.slice(2,4) : "") + (d.length>4 ? "/"+d.slice(4) : ""); };
+const fechaOk = s => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s||""); if(!m) return false; const dt = new Date(+m[3], +m[2]-1, +m[1]); return dt.getDate()==+m[1] && dt.getMonth()==+m[2]-1 && +m[3]>2000 && +m[3]<2100; };
+const aISO = s => { const [d,m,y] = s.split("/"); return `${y}-${m}-${d}`; };
+const hoyTxt = () => { const h = new Date(); return String(h.getDate()).padStart(2,"0")+"/"+String(h.getMonth()+1).padStart(2,"0")+"/"+h.getFullYear(); };
+document.addEventListener("input", e => { if(e.target.classList.contains("fe")) e.target.value = mascaraFecha(e.target.value); }, true);
 const GASTOS = ["Peajes","Cargue","Descargue","Engrase","Llantas","Parqueaderos","Lavados","Arreglos y repuestos","% Conductor","Carrozada","Descarrozada","Brillada","Mangueras","Comisión"];
 
 // ---- construir filas ----
 const ant = $("antGrid");
 const antHtml = i => `<div class="n">${i}<span class="t">- FECHA / VALOR</span></div>
-  <div class="val"><input id="aF${i}" type="date" aria-label="Anticipo ${i} fecha"></div>
+  <div class="val"><input id="aF${i}" class="fe" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" aria-label="Anticipo ${i} fecha"></div>
   <div class="val"><span class="money">$<input id="aV${i}" class="num m" inputmode="numeric" aria-label="Anticipo ${i} valor"></span></div>`;
 // escritorio: cada fila lleva el anticipo k y el k+4, como el Excel; celular: 1 a 8 en orden
 if(matchMedia("(max-width:640px)").matches){ for(let i=1;i<=8;i++) ant.insertAdjacentHTML("beforeend", antHtml(i)); }
@@ -226,7 +233,7 @@ else { for(let k=1;k<=4;k++) ant.insertAdjacentHTML("beforeend", antHtml(k) + an
 
 const ac = $("acpmGrid");
 for(let i=1;i<=4;i++) ac.insertAdjacentHTML("beforeend",
-  `<div class="val"><input id="cF${i}" type="date" aria-label="Tanqueo ${i} fecha"></div>
+  `<div class="val"><input id="cF${i}" class="fe" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" aria-label="Tanqueo ${i} fecha"></div>
    <div class="val prov"><input id="cP${i}" placeholder="Proveedor / estación" aria-label="Tanqueo ${i} proveedor"></div>
    <div class="val"><span class="money">$<input id="cV${i}" class="num m" inputmode="numeric" aria-label="Tanqueo ${i} valor"></span></div>`);
 
@@ -267,6 +274,7 @@ function calcular(){
   $("sigNom").textContent = $("conductor").value.trim().toUpperCase();
   $("sigCc").textContent = $("cc").value.trim() ? "C.C. " + $("cc").value.trim() : "";
 }
+$("fecha").value = hoyTxt();
 calcular();
 
 // ---- fotos (se reducen para que el PDF no pese) ----
@@ -297,7 +305,9 @@ function validar(){
   const req = [["fecha","la fecha"],["placa","la placa"],["conductor","el nombre del conductor"],["cc","la cédula"],["origen","el origen"],["destino","el destino"]];
   document.querySelectorAll(".bad").forEach(el=>el.classList.remove("bad"));
   const f = []; req.forEach(([id,t]) => { if(!$(id).value.trim()){ f.push(t); $(id).parentElement.classList.add("bad"); } });
-  return f;
+  document.querySelectorAll(".fe").forEach(el => { const v = el.value.trim();
+    if(v && !fechaOk(v)){ f.push((el.id==="fecha" ? "la fecha" : "una fecha") + " bien escrita (dd/mm/aaaa)"); el.parentElement.classList.add("bad"); } });
+  return [...new Set(f)];
 }
 let pdfBlob=null, pdfName="";
 $("form").addEventListener("submit", e => {
@@ -308,7 +318,7 @@ $("form").addEventListener("submit", e => {
   try{
     const doc = crearPDF();
     pdfBlob = doc.output("blob");
-    pdfName = `Control_ruta_${$("placa").value}_${$("fecha").value}.pdf`;
+    pdfName = `Control_ruta_${$("placa").value}_${aISO($("fecha").value)}.pdf`;
     $("actions").hidden = true; $("done").hidden = false;
     $("done").scrollIntoView({behavior:"smooth", block:"center"});
   }catch(err){
@@ -335,7 +345,7 @@ $("share").onclick = async () => {
 // ---------- PDF con la planilla Control de Ruta ----------
 function leer(){
   const v = id => $(id).value.trim();
-  const fecha = s => { if(!s) return ""; const [y,m,d]=s.split("-"); return `${d}/${m}/${y}`; };
+  const fecha = s => fechaOk(s) ? s : "";
   const d = {manifiesto:v("manifiesto"), fecha:fecha(v("fecha")), placa:v("placa"), conductor:v("conductor").toUpperCase(), cc:v("cc"),
     kmIni:num("kmIni"), kmFin:num("kmFin"), flete:num("flete"), origen:v("origen").toUpperCase(), destino:v("destino").toUpperCase(),
     cliente:v("cliente").toUpperCase(), producto:v("producto").toUpperCase(), ant:[], acpm:[], gastos:[]};
